@@ -7,6 +7,7 @@ use ggez::event::{self, EventHandler, KeyCode, KeyMods};
 use ggez::graphics;
 use ggez::timer;
 use ggez::{Context, ContextBuilder, GameResult};
+
 use nalgebra as na;
 use rand;
 
@@ -27,6 +28,7 @@ struct MainState {
     snake_pos_y: VecDeque<f32>,
 }
 
+#[derive(Debug)]
 enum Direction {
     Left,
     Right,
@@ -79,67 +81,47 @@ fn draw_background(ctx: &mut Context) -> GameResult {
 
 impl EventHandler for MainState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
-        const DESIRED_FPS: u32 = 60;
+        const DESIRED_FPS: u32 = 8;
 
         while timer::check_update_time(ctx, DESIRED_FPS) {
             let seconds = 1.0 / (DESIRED_FPS as f32);
 
             match &self.dir {
                 Direction::Up => {
-                    self.snake_pos_y.push_back(*self.snake_pos_y
+                    self.snake_pos_y.push_front(*self.snake_pos_y
                         .get(0)
                         .unwrap_or_else(|| {
                             println!("Index out of bounds");
                             process::exit(1);
                         }) - 1.0);
-                    self.snake_pos_x.push_back(*self.snake_pos_x
-                        .get(0)
-                        .unwrap_or_else(|| {
-                            println!("Index out of bounds");
-                            process::exit(1);
-                        }));
+                    self.snake_pos_y.pop_back();
                 }
                 Direction::Right => {
-                    self.snake_pos_y.push_back(*self.snake_pos_y
-                        .get(0)
-                        .unwrap_or_else(|| {
-                            println!("Index out of bounds");
-                            process::exit(1);
-                        }));
-                    self.snake_pos_x.push_back(*self.snake_pos_x
+                    self.snake_pos_x.push_front(self.snake_pos_x
                         .get(0)
                         .unwrap_or_else(|| {
                             println!("Index out of bounds");
                             process::exit(1);
                         }) + 1.0);
+                    self.snake_pos_x.pop_back();
                 }
                 Direction::Down => {
-                    self.snake_pos_y.push_back(*self.snake_pos_y
+                    self.snake_pos_y.push_front(*self.snake_pos_y
                         .get(0)
                         .unwrap_or_else(|| {
                             println!("Index out of bounds");
                             process::exit(1);
                         }) + 1.0);
-                    self.snake_pos_x.push_back(*self.snake_pos_x
-                        .get(0)
-                        .unwrap_or_else(|| {
-                            println!("Index out of bounds");
-                            process::exit(1);
-                        }));
+                    self.snake_pos_y.pop_back();
                 }
                 Direction::Left => {
-                    self.snake_pos_y.push_back(*self.snake_pos_y
-                        .get(0)
-                        .unwrap_or_else(|| {
-                            println!("Index out of bounds");
-                            process::exit(1);
-                        }));
-                    self.snake_pos_x.push_back(*self.snake_pos_x
+                    self.snake_pos_x.push_front(*self.snake_pos_x
                         .get(0)
                         .unwrap_or_else(|| {
                             println!("Index out of bounds");
                             process::exit(1);
                         }) - 1.0);
+                    self.snake_pos_x.pop_back();
                 }
                 _ => (),
             }
@@ -152,22 +134,23 @@ impl EventHandler for MainState {
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         graphics::clear(ctx, graphics::Color::from_rgb_u32(0xCED6B5));
 
-        draw_background(ctx);
+        // draw_background(ctx);
+
+        let outside_rect = graphics::Mesh::new_rectangle(
+            ctx,
+            graphics::DrawMode::stroke(1.0),
+            graphics::Rect::new(0.0, 0.0, 10.0, 10.0),
+            graphics::Color::from_rgb_u32(0x000000)
+        )?;
+
+        let inside_rect = graphics::Mesh::new_rectangle(
+            ctx,
+            graphics::DrawMode::fill(),
+            graphics::Rect::new(0.0, 0.0, 6.0, 6.0),
+            graphics::Color::from_rgb_u32(0x000000)
+        )?;
 
         for n in 0..self.snake_pos_x.len() {
-            let outside_rect = graphics::Mesh::new_rectangle(
-                ctx,
-                graphics::DrawMode::stroke(1.0),
-                graphics::Rect::new(0.0, 0.0, 10.0, 10.0),
-                graphics::Color::from_rgb_u32(0x000000)
-            )?;
-
-            let inside_rect = graphics::Mesh::new_rectangle(
-                ctx,
-                graphics::DrawMode::fill(),
-                graphics::Rect::new(0.0, 0.0, 6.0, 6.0),
-                graphics::Color::from_rgb_u32(0x000000)
-            )?;
 
             graphics::draw(ctx, &outside_rect, (na::Point2::new(self.snake_pos_x.get(n).unwrap() * 11.0 + PADDING,
             self.snake_pos_y.get(n).unwrap() * 11.0 + PADDING
@@ -176,6 +159,8 @@ impl EventHandler for MainState {
             self.snake_pos_y.get(n).unwrap() * 11.0 + PADDING + 2.0
             ),))?;
         }
+
+        println!("{:?}", self.snake_pos_x);
 
         graphics::present(ctx)?;
 
